@@ -1,0 +1,10 @@
+{
+  "functional": {
+    "title": "Business Process Overview",
+    "content": "# Business Requirements Document\n\n## 1. Executive Summary\nThis document outlines the core business processes and operational requirements for the current project.\n\n## 2. Key Objectives\n- Streamline data entry workflows.\n- Enhance reporting accuracy across departments.\n- Improve user experience for internal stakeholders.\n\n## 3. Scope of Work\n- Analysis of existing data structures.\n- Mapping of current business logic.\n- Identification of potential automation opportunities.\n"
+  },
+  "technical": {
+    "title": "System Architecture Design",
+    "content": "# Technical Specification\n\n## 1. Infrastructure Overview\nThe system is designed to be highly available and scalable using modern cloud-native principles.\n\n## 2. Component Architecture\n- API Gateway: Handles all incoming requests and routing.\n- Microservices: Independent services for specific business domains.\n- Database: Distributed data store with high consistency.\n\n## 3. Security & Compliance\n- End-to-end encryption for sensitive data.\n- Role-based access control (RBAC) for all system components.\n"
+  }
+}

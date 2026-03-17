@@ -1,17 +1,13 @@
-export interface ProjectStatus {
-  stage: number;
-  status: 'processing' | 'completed' | 'failed';
-}
+import { Project } from '../api/projects';
 
-export const getProjectStatus = (projectId: string): ProjectStatus => {
-  const saved = localStorage.getItem(`project_status_${projectId}`);
-  return saved ? JSON.parse(saved) : { stage: 0, status: 'processing' };
+export const isProjectCompleted = (project: Project): boolean => {
+  return (
+    project.functionalDocumentStatus === 'completed' &&
+    project.technicalDocumentStatus === 'completed'
+  );
 };
 
-export const setProjectStatus = (projectId: string, status: ProjectStatus) => {
-  localStorage.setItem(`project_status_${projectId}`, JSON.stringify(status));
-};
-
+// Kept for backward compatibility if any modules still import it, but it does nothing
 export const clearProjectStatus = (projectId: string) => {
   localStorage.removeItem(`project_status_${projectId}`);
 };

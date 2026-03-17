@@ -4,14 +4,12 @@ import { ChevronRight, Home, Upload, Github, Lock, FileArchive, X, Loader2, File
 import { uploadZip, uploadGithub } from "../api/uploadApi";
 import { startAnalysis, getAnalysisStatus } from "../api/analysisApi";
 import { generateDocuments, getDocumentStatus } from "../api/documentsApi";
-import { getProject, updateProject } from "../api/projects";
-import { getProjectStatus, setProjectStatus, clearProjectStatus } from '../utils/ProjectStatus'; 
-
+import { getProject, updateProject, Project } from "../api/projects";
 
 const ProgressStepper: React.FC<{ currentStage: number }> = ({ currentStage }) => {
   const stages = [
     { id: 1, name: 'Fetching Files', icon: <FileArchive size={18} /> },
-    { id: 2, name: 'Summarizing Files', icon: <FileText size={18} /> },
+    { id: 2, name: 'Analyzing Files', icon: <FileText size={18} /> },
     { id: 3, name: 'Generating Docs', icon: <FileText size={18} /> },
     { id: 4, name: 'Completed', icon: <CheckCircle size={18} /> },
   ];
@@ -100,10 +98,10 @@ export const UploadPage: React.FC = () => {
         if (!projectId) return;
         const data = await getProject(projectId);
         setProject(data);
-        
-        // If project already has files uploaded, go to details page
-        if (data.uploadType) {
-          navigate(`/project/${projectId}`, { replace: true });
+
+        // If documents are completed, heavily discourage re-upload by redirecting
+        if (data.functionalDocumentStatus === 'completed' || data.technicalDocumentStatus === 'completed') {
+          navigate(`/selection/${projectId}`, { replace: true });
         }
       } catch (err) {
         console.error("Failed to load project", err);
@@ -113,28 +111,8 @@ export const UploadPage: React.FC = () => {
   }, [projectId, navigate]);
 
   
-  useEffect(() => {
-    if (!projectId) return;
-
-    const saved = getProjectStatus(projectId);
-
-    if (saved.status === 'completed') {
-      navigate(`/project/${projectId}`, { replace: true });
-      return;
-    }
-
-    if (saved.status === 'processing' && saved.stage > 0) {
-      setCurrentStage(saved.stage);
-      setIsAnalyzing(true);
-      resumePipelineFrom(saved.stage);
-    }
-    
-  }, [projectId]); 
-
- 
-  const persistStage = (stage: number, status: 'processing' | 'completed' | 'failed') => {
+  const persistStage = (stage: number) => {
     setCurrentStage(stage);
-    if (projectId) setProjectStatus(projectId, { stage, status });
   };
 
   // ─── Resume polling from a given stage (called when returning to page) ───
@@ -142,7 +120,7 @@ export const UploadPage: React.FC = () => {
     try {
       if (fromStage <= 2) {
         // Still in analysis phase — keep polling analysis status
-        persistStage(2, 'processing');
+        persistStage(2);
         let analysisDone = false;
         while (!analysisDone) {
           if (cancelledRef.current) return; // user navigated away
@@ -152,16 +130,16 @@ export const UploadPage: React.FC = () => {
           } else if (res.data.status === 'failed') {
             throw new Error('Analysis failed');
           } else {
-            await new Promise(r => setTimeout(r, 3000));
+            await new Promise(r => setTimeout(r, 10000));
           }
         }
-        persistStage(3, 'processing');
+        persistStage(3);
         await generateDocuments(projectId!);
       }
 
       if (fromStage <= 3) {
     
-        persistStage(3, 'processing');
+        persistStage(3);
         let docsDone = false;
         while (!docsDone) {
           if (cancelledRef.current) return; 
@@ -171,20 +149,19 @@ export const UploadPage: React.FC = () => {
           } else if (res.data.status === 'failed') {
             throw new Error('Document generation failed');
           } else {
-            await new Promise(r => setTimeout(r, 4000));
+            await new Promise(r => setTimeout(r, 10000));
           }
         }
       }
 
       if (cancelledRef.current) return;
 
-      persistStage(4, 'completed');
+      persistStage(4);
       await new Promise(r => setTimeout(r, 500));
-      navigate(`/project/${projectId}`);
+      navigate(`/selection/${projectId}`);
     } catch (err) {
       console.error(err);
       if (!cancelledRef.current) {
-        if (projectId) setProjectStatus(projectId, { stage: 0, status: 'failed' });
         alert('Pipeline failed. Please try again.');
         setIsAnalyzing(false);
         setCurrentStage(0);
@@ -205,7 +182,7 @@ export const UploadPage: React.FC = () => {
 
     try {
       setIsAnalyzing(true);
-      persistStage(1, 'processing');
+      persistStage(1);
 
       if (uploadType === 'zip' && selectedFile) {
         await uploadZip(projectId!, selectedFile);
@@ -218,7 +195,7 @@ export const UploadPage: React.FC = () => {
       }
 
       if (cancelledRef.current) return;
-      persistStage(2, 'processing');
+      persistStage(2);
 
       await startAnalysis(projectId!);
 
@@ -231,12 +208,12 @@ export const UploadPage: React.FC = () => {
         } else if (res.data.status === 'failed') {
           throw new Error('Analysis failed');
         } else {
-          await new Promise(r => setTimeout(r, 3000));
+          await new Promise(r => setTimeout(r, 10000));
         }
       }
 
       if (cancelledRef.current) return;
-      persistStage(3, 'processing');
+      persistStage(3);
 
       await generateDocuments(projectId!);
 
@@ -249,19 +226,18 @@ export const UploadPage: React.FC = () => {
         } else if (res.data.status === 'failed') {
           throw new Error('Document generation failed');
         } else {
-          await new Promise(r => setTimeout(r, 4000));
+          await new Promise(r => setTimeout(r, 10000));
         }
       }
 
       if (cancelledRef.current) return;
 
-      persistStage(4, 'completed');
+      persistStage(4);
       await new Promise(r => setTimeout(r, 500));
-      navigate(`/project/${projectId}`);
+      navigate(`/selection/${projectId}`);
     } catch (err) {
       console.error(err);
       if (!cancelledRef.current) {
-        if (projectId) setProjectStatus(projectId, { stage: 0, status: 'failed' });
         alert('Pipeline failed. Please try again.');
       }
     } finally {
@@ -320,27 +296,13 @@ export const UploadPage: React.FC = () => {
         <span className="font-medium text-gray-900">Source Input</span>
       </nav>
 
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900">{project?.name}</h2>
-            <p className="text-gray-500">{project?.description}</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-gray-400">Created {project?.createdAt}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-center">
-        <div className="w-full max-w-4xl">
-          <div className="border border-gray-200 bg-white p-8">
-            <h3 className="mb-6 text-xl font-bold text-gray-900">Source Input</h3>
-
+      <div className="w-full">
+        <div>
+          <div className="w-full">
             <div className="mb-8 flex gap-4 border-b border-gray-100 pb-4">
               <button
                 onClick={() => setUploadType('zip')}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+                className={`flex cursor-pointer items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
                   uploadType === 'zip' ? 'text-[#007B65] border-b-2 border-[#007B65]' : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -349,7 +311,7 @@ export const UploadPage: React.FC = () => {
               </button>
               <button
                 onClick={() => setUploadType('git')}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+                className={`flex cursor-pointer items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
                   uploadType === 'git' ? 'text-[#007B65] border-b-2 border-[#007B65]' : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -446,7 +408,18 @@ export const UploadPage: React.FC = () => {
               </div>
             )}
 
-            <div className="mt-8 flex justify-end">
+            <div className="mt-8 flex items-center justify-between">
+              <div>
+                {(project?.functionalDocumentStatus === 'completed' || project?.technicalDocumentStatus === 'completed') && !isAnalyzing && (
+                  <button
+                    onClick={() => navigate(`/selection/${projectId}`)}
+                    className="flex cursor-pointer items-center gap-2 text-sm font-bold text-[#007B65] hover:text-[#006654]"
+                  >
+                    <FileText size={18} />
+                    Go to Generated Documentation
+                  </button>
+                )}
+              </div>
               <button
                 onClick={handleAnalyze}
                 disabled={isAnalyzing || (uploadType === 'zip' ? !selectedFile : !gitUrl.trim())}
@@ -454,7 +427,7 @@ export const UploadPage: React.FC = () => {
                   isAnalyzing
                     ? 'bg-[#007B65]/70 cursor-wait'
                     : (uploadType === 'zip' ? selectedFile : gitUrl.trim())
-                      ? 'bg-[#007B65] hover:bg-[#006654]'
+                      ? 'bg-[#007B65] hover:bg-[#006654] cursor-pointer'
                       : 'cursor-not-allowed bg-gray-300'
                 }`}
               >

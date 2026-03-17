@@ -96,7 +96,7 @@ export const SelectionPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
         {/* Technical Document */}
-        <div className="bg-white border border-[#E5E7EB] p-6">
+        <div className="bg-white border border-[#E5E7EB] p-6 flex flex-col h-full">
 
           <div className="flex items-start justify-between mb-4">
 
@@ -121,7 +121,7 @@ export const SelectionPage = () => {
           </p>
 
           {status?.documents?.technical ? (
-            <div className="flex gap-3">
+            <div className="flex gap-3 mt-auto">
 
               <button
                 onClick={() => preview("technical")}
@@ -141,13 +141,13 @@ export const SelectionPage = () => {
 
             </div>
           ) : (
-            <p className="text-gray-500 text-sm">Generating...</p>
+            <p className="text-gray-500 text-sm mt-auto">Generating...</p>
           )}
 
         </div>
 
         {/* Functional Document */}
-        <div className="bg-white border border-[#E5E7EB] p-6">
+        <div className="bg-white border border-[#E5E7EB] p-6 flex flex-col h-full">
 
           <div className="flex items-start justify-between mb-4">
 
@@ -172,7 +172,7 @@ export const SelectionPage = () => {
           </p>
 
           {status?.documents?.functional ? (
-            <div className="flex gap-3">
+            <div className="flex gap-3 mt-auto">
 
               <button
                 onClick={() => preview("functional")}
@@ -192,7 +192,7 @@ export const SelectionPage = () => {
 
             </div>
           ) : (
-            <p className="text-gray-500 text-sm">Generating...</p>
+            <p className="text-gray-500 text-sm mt-auto">Generating...</p>
           )}
 
         </div>

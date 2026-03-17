@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ProjectCard } from '../components/ProjectCard';
-import { clearProjectStatus } from '../utils/ProjectStatus';
 import { getProjects, createProject, updateProject, deleteProject, Project } from '../api/projects';
 
 export const LandingPage: React.FC = () => {
@@ -11,7 +10,9 @@ export const LandingPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [newProject, setNewProject] = useState({ name: '', description: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
@@ -72,23 +73,27 @@ export const LandingPage: React.FC = () => {
     }
   };
 
-  const handleDeleteProject = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this project?')) {
-      try {
-        await deleteProject(id);
-        const updatedProjects = projects.filter(p => p.id !== id);
-        setProjects(updatedProjects);
-        
-        // Adjust current page if it's now empty
-        const newTotalPages = Math.ceil(updatedProjects.length / projectsPerPage);
-        if (currentPage >= newTotalPages && newTotalPages > 0) {
-          setCurrentPage(newTotalPages - 1);
-        }
-        
-        clearProjectStatus(id);
-      } catch (error) {
-        console.error('Failed to delete project', error);
+  const handleDeleteProjectClick = (project: Project) => {
+    setProjectToDelete(project);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteProject = async () => {
+    if (!projectToDelete) return;
+    try {
+      await deleteProject(projectToDelete.id);
+      const updatedProjects = projects.filter(p => p.id !== projectToDelete.id);
+      setProjects(updatedProjects);
+      setIsDeleteModalOpen(false);
+      setProjectToDelete(null);
+      
+      // Adjust current page if it's now empty
+      const newTotalPages = Math.ceil(updatedProjects.length / projectsPerPage);
+      if (currentPage >= newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages - 1);
       }
+    } catch (error) {
+      console.error('Failed to delete project', error);
     }
   };
 
@@ -139,7 +144,7 @@ export const LandingPage: React.FC = () => {
                       setEditingProject({ ...project });
                       setIsEditModalOpen(true);
                     }}
-                    onDelete={() => handleDeleteProject(project.id)}
+                    onDelete={() => handleDeleteProjectClick(project)}
                   />
                 </div>
               ))}
@@ -154,12 +159,12 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* Pagination Controls */}
-        {totalPages > 1 && (
+        {totalPages > 0 && (
           <div className="mt-12 flex items-center justify-center gap-4">
             <button
               onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
               disabled={currentPage === 0}
-              className={`flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white transition-all ${
+              className={`flex h-10 w-10 items-center justify-center rounded-none border border-gray-200 bg-white transition-all ${
                 currentPage === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:border-[#007B65] hover:text-[#007B65]'
               }`}
             >
@@ -171,7 +176,7 @@ export const LandingPage: React.FC = () => {
                 <button
                   key={idx}
                   onClick={() => setCurrentPage(idx)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition-all ${
+                  className={`flex h-10 w-10 items-center justify-center rounded-none text-sm font-bold transition-all ${
                     currentPage === idx
                       ? 'bg-[#007B65] text-white shadow-md'
                       : 'bg-white border border-gray-200 text-gray-500 hover:border-[#007B65] hover:text-[#007B65]'
@@ -185,7 +190,7 @@ export const LandingPage: React.FC = () => {
             <button
               onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
               disabled={currentPage === totalPages - 1}
-              className={`flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white transition-all ${
+              className={`flex h-10 w-10 items-center justify-center rounded-none border border-gray-200 bg-white transition-all ${
                 currentPage === totalPages - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:border-[#007B65] hover:text-[#007B65]'
               }`}
             >
@@ -311,6 +316,49 @@ export const LandingPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Project Modal */}
+      {isDeleteModalOpen && projectToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white p-8 shadow-xl">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-900">Delete Project</h3>
+              <button 
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setProjectToDelete(null);
+                }} 
+                className="text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <p className="mb-8 text-sm text-gray-600">
+              Are you sure you want to delete <span className="font-bold text-gray-900">{projectToDelete.name}</span>? This action cannot be undone and will permanently delete all associated documents and settings.
+            </p>
+            
+            <div className="mt-8 flex justify-end gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setProjectToDelete(null);
+                }}
+                className="border border-gray-200 px-8 py-2.5 text-base font-bold text-gray-900 hover:bg-gray-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteProject}
+                className="bg-red-600 px-8 py-2.5 text-base font-bold text-white hover:bg-red-700 cursor-pointer"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ChevronRight, Home, FileArchive, Github, FileText, ArrowRight, ExternalLink, Folder } from 'lucide-react';
+import { ChevronRight, Home, FileArchive, Github, FileText, ArrowRight, ExternalLink, Folder, CheckCircle, Clock } from 'lucide-react';
 import { getProject } from '../api/projects';
 import { getAnalysisStatus } from '../api/analysisApi';
 import { getDocumentStatus } from '../api/documentsApi';
@@ -73,119 +73,114 @@ export const ProjectDetailsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto space-y-4">
+      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Source Inputs Section */}
-        <section className="bg-white border border-gray-200 p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
+        <div className="bg-white border border-gray-200 p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
               <Folder className="text-[#007B65]" size={18} />
               Source Inputs
             </h3>
             <span className="rounded-full bg-[#E6F4F1] px-3 py-1 text-xs font-bold text-[#007B65] uppercase">
-              {project.uploadType === 'zip' ? 'ZIP Archive' : project.uploadType === 'git' ? 'GitHub Repo' : 'No Input'}
+              {project.uploadType === 'zip' ? 'ZIP Archive' : project.uploadType === 'github' || project.uploadType === 'git' ? 'GitHub Repo' : 'No Input'}
             </span>
           </div>
 
           {project.uploadType === 'zip' ? (
             <div className="space-y-3">
-              <div className="flex items-center gap-3 rounded-sm border border-gray-100 bg-gray-50 p-3">
+              <div className="flex items-center gap-3 rounded-sm border border-gray-100 bg-gray-50 p-4">
                 <div className="flex h-10 w-10 items-center justify-center bg-white border border-gray-200 shadow-sm">
                   <FileArchive className="text-[#007B65]" size={20} />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-gray-900">{project.zipName || 'source_files.zip'}</p>
+                  <p className="text-sm font-bold text-gray-900">{project.uploadSourceName || project.zipName || 'source_files.zip'}</p>
                   <p className="text-xs text-gray-500">Original upload source</p>
                 </div>
               </div>
             </div>
-          ) : project.uploadType === 'git' ? (
+          ) : project.uploadType === 'github' || project.uploadType === 'git' ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3 rounded-sm border border-gray-100 bg-gray-50 p-4">
                 <div className="flex h-12 w-12 items-center justify-center bg-white border border-gray-200 shadow-sm">
                   <Github className="text-gray-900" size={24} />
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs font-bold text-gray-900">Repository Link</p>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-sm font-bold text-gray-900">Repository Link</p>
                   <a 
-                    href={project.gitUrl} 
+                    href={project.uploadSourceName || project.gitUrl} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="mt-0.5 flex items-center gap-1.5 text-xs text-[#007B65] hover:underline"
+                    className="mt-0.5 flex items-center gap-1.5 text-sm text-[#007B65] hover:underline truncate"
                   >
-                    {project.gitUrl}
-                    <ExternalLink size={12} />
+                    <span className="truncate">{project.uploadSourceName || project.gitUrl}</span>
+                    <ExternalLink size={14} className="flex-shrink-0" />
                   </a>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="py-6 text-center border-2 border-dashed border-gray-100 bg-gray-50/30">
-              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+            <div className="py-8 text-center border-2 border-dashed border-gray-100 bg-gray-50/30">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
                 <Folder className="text-gray-400" size={24} />
               </div>
-              <h4 className="text-sm font-bold text-gray-900">No files uploaded yet</h4>
-              <p className="mx-auto mt-1 max-w-xs text-xs text-gray-500">
+              <h4 className="text-base font-bold text-gray-900">No files uploaded yet</h4>
+              <p className="mx-auto mt-2 max-w-xs text-sm text-gray-500">
                 Please go to the Upload Page to add your project source files or connect a repository.
               </p>
               <button 
                 onClick={() => navigate(`/upload/${projectId}`)}
-                className="mt-3 inline-flex items-center gap-2 bg-[#007B65] px-6 py-2 text-xs font-bold text-white transition-all hover:bg-[#006654]"
+                className="mt-4 inline-flex items-center gap-2 bg-[#007B65] px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#006654]"
               >
                 Go to Upload Page
                 <ArrowRight size={16} />
               </button>
             </div>
           )}
-        </section>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Actions Card */}
-          <div className="bg-white border border-gray-200 p-4 shadow-sm">
-            <h3 className="mb-3 text-base font-bold flex items-center gap-2">
-              <FileText size={18} className="text-[#007B65]" />
-              Documentation
-            </h3>
-            <p className="mb-4 text-xs text-gray-500 leading-relaxed">
-              Access the generated Functional and Technical specifications based on the source inputs provided.
-            </p>
-            
-            <button
-              onClick={() => navigate(`/selection/${projectId}`)}
-              className="group flex w-full items-center justify-between border-2 border-[#007B65] bg-white px-4 py-3 text-xs font-bold text-[#007B65] transition-all hover:bg-[#007B65] hover:text-white"
-            >
-              <span>Generated Documents</span>
-              <ArrowRight className="transition-transform group-hover:translate-x-1" size={16} />
-            </button>
+        {/* Actions Card */}
+        <div className="bg-white border border-gray-200 p-6 shadow-sm">
+          <h3 className="mb-4 text-lg font-bold flex items-center gap-2">
+            <FileText size={18} className="text-[#007B65]" />
+            Documentation
+          </h3>
+          <p className="mb-6 text-sm text-gray-500 leading-relaxed">
+            Access the generated Functional and Technical specifications based on the source inputs provided.
+          </p>
+          
+          <button
+            onClick={() => navigate(`/selection/${projectId}`)}
+            className="group flex w-full cursor-pointer items-center justify-between border-2 border-[#007B65] bg-white px-4 py-3.5 text-sm font-bold text-[#007B65] transition-all hover:bg-[#007B65] hover:text-white"
+          >
+            <span>Generated Documents</span>
+            <ArrowRight className="transition-transform group-hover:translate-x-1" size={18} />
+          </button>
 
-            <div className="mt-3 flex flex-col gap-2">
-               <div className={`flex items-center gap-2 text-xs ${docStatus?.documents?.functional ? 'text-gray-900' : 'text-gray-400'}`}>
-                  <div className={`h-1.5 w-1.5 rounded-full ${docStatus?.documents?.functional ? 'bg-[#007B65]' : 'bg-gray-300'}`}></div>
-                  <span>Functional {docStatus?.documents?.functional ? '✓' : '✗'}</span>
-               </div>
-               <div className={`flex items-center gap-2 text-xs ${docStatus?.documents?.technical ? 'text-gray-900' : 'text-gray-400'}`}>
-                  <div className={`h-1.5 w-1.5 rounded-full ${docStatus?.documents?.technical ? 'bg-[#007B65]' : 'bg-gray-300'}`}></div>
-                  <span>Technical {docStatus?.documents?.technical ? '✓' : '✗'}</span>
-               </div>
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="bg-white border border-gray-200 p-4 shadow-sm">
-            <h4 className="mb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Project Stats</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between border-b border-gray-50 pb-2">
-                <span className="text-xs text-gray-500">Analysis Status</span>
-                <span className={`text-xs font-bold capitalize ${analysisStatus === 'completed' ? 'text-[#007B65]' : 'text-orange-500'}`}>
-                  {analysisStatus.replace('_', ' ')}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-xs text-gray-500">Docs Generated</span>
-                <span className="text-xs font-bold text-gray-900">
-                  {Object.values(docStatus?.documents || {}).filter(Boolean).length}
-                </span>
-              </div>
-            </div>
+          <div className="mt-6 flex flex-col gap-3">
+             <div className="flex items-center justify-between p-3 border border-gray-100 bg-gray-50/50 rounded-sm">
+                <span className="text-sm font-medium text-gray-700">Functional Document</span>
+                {project.functionalDocumentStatus === 'completed' ? (
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-[#007B65] bg-[#E6F4F1] px-2.5 py-1 rounded-full">
+                    <CheckCircle size={14} /> Completed
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full">
+                    <Clock size={14} /> Pending
+                  </span>
+                )}
+             </div>
+             <div className="flex items-center justify-between p-3 border border-gray-100 bg-gray-50/50 rounded-sm">
+                <span className="text-sm font-medium text-gray-700">Technical Document</span>
+                {project.technicalDocumentStatus === 'completed' ? (
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-[#007B65] bg-[#E6F4F1] px-2.5 py-1 rounded-full">
+                    <CheckCircle size={14} /> Completed
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full">
+                    <Clock size={14} /> Pending
+                  </span>
+                )}
+             </div>
           </div>
         </div>
       </div>

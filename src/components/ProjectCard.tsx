@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MoreHorizontal, ArrowRight, Pencil, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getProjectStatus } from '../utils/ProjectStatus';
 
 interface ProjectCardProps {
   id: string;
@@ -10,6 +9,8 @@ interface ProjectCardProps {
   createdAt?: string;
   created_at?: string; // Fallback for raw backend data
   uploadType?: string | null;
+  functionalDocumentStatus?: string;
+  technicalDocumentStatus?: string;
   onEdit?: () => void;
   onDelete?: () => void;
 }
@@ -21,6 +22,8 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   createdAt,
   created_at,
   uploadType,
+  functionalDocumentStatus,
+  technicalDocumentStatus,
   onEdit,
   onDelete,
 }) => {
@@ -44,10 +47,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     setIsMenuOpen(!isMenuOpen);
   };
 
+  const isCompleted = functionalDocumentStatus === 'completed' && technicalDocumentStatus === 'completed';
+  const isProcessing = !!uploadType && !isCompleted;
+
   const handleCardClick = () => {
-    const status = getProjectStatus(id);
     // If it's a new project (no uploadType) or it's currently processing, go to upload
-    if (!uploadType || (status.status === 'processing' && status.stage > 0)) {
+    if (!uploadType || isProcessing) {
       navigate(`/upload/${id}`);
     } else {
       navigate(`/project/${id}`);
@@ -69,22 +74,18 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     }
   };
 
-  const projectStatus = getProjectStatus(id);
-  const isReady = projectStatus.status === 'completed';
-  const isProcessing = projectStatus.status === 'processing' && projectStatus.stage > 0;
-
   const displayDate = createdAt || created_at;
 
   return (
     <div
       onClick={handleCardClick}
-      className="group relative flex h-[280px] cursor-pointer flex-col rounded-sm border border-gray-200 bg-white p-6 transition-all hover:border-[#007B65] hover:shadow-md"
+      className="group relative flex h-[280px] cursor-pointer flex-col rounded-none border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-[#007B65] hover:shadow-md"
     >
       <div className="mb-4 flex items-start justify-between">
         <div className="overflow-hidden">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="truncate text-xl font-bold text-gray-900" title={name}>{name}</h3>
-            {isReady && (
+            {isCompleted && (
               <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider border border-emerald-100">
                 Ready
               </span>
